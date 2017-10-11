@@ -188,15 +188,31 @@ set_log_function(Function) ->
 %%------------------------------------------------------------------------------
 %% @private
 %%------------------------------------------------------------------------------
+%%------------------------------------------------------------------------------
 init([]) ->
-    %% avoid excessive garbage collection
-    catch process_flag(message_queue_data, off_heap),
-    State = #state{
-               protocol = syslog_lib:get_property(protocol, ?PROTOCOL),
-               dest_host = syslog_lib:get_property(dest_host, ?DEST_HOST),
-               dest_port = syslog_lib:get_property(dest_port, ?DEST_PORT)},
-    LogLevel = syslog_lib:get_property(log_level, ?SYSLOG_LOGLEVEL),
-    {ok, set_opts(LogLevel, init_transport(State))}.
+  %% avoid excessive garbage collection
+  catch process_flag(message_queue_data, off_heap),
+  State = #state{
+    protocol = syslog_lib:get_property(protocol, ?PROTOCOL),
+    dest_host = case syslog_lib:get_property(dest_host, ?DEST_HOST) of
+                  [] -> %% dest_host defined for env var, but env var NOT FOUND
+                    ?DEST_HOST;
+                  StringIp when is_list(StringIp) -> %% dest_host defined for env var, env var is string like "127.0.0.1"
+                    {ok, HostIp} = inet_parse:address(StringIp),
+                    HostIp;
+                  Host ->
+                    Host
+                end,
+    dest_port = case syslog_lib:get_property(dest_port, ?DEST_PORT) of
+                  [] -> %% dest_port defined for env var, but env var NOT FOUND
+                    ?DEST_PORT;
+                  StringPort when is_list(StringPort) -> %% dest_port defined for env var, env var is string like "514"
+                    list_to_integer(StringPort);
+                  Port ->
+                    Port
+                end},
+  LogLevel = syslog_lib:get_property(log_level, ?SYSLOG_LOGLEVEL),
+  {ok, set_opts(LogLevel, init_transport(State))}.
 
 %%------------------------------------------------------------------------------
 %% @private
