@@ -357,15 +357,10 @@ maybe_log(Severity, Pid, Timestamp, SD, Fmt, Args, Opts) ->
 do_log(Severity, Pid, Timestamp, StructuredData, Msg, Opts) ->
     PRI = pri(Severity, Opts),
     HDR = hdr(Pid, Timestamp, Opts),
-    lists:foreach(
-      fun(<<>>) when StructuredData =:= [] ->
-              ok;
-         (Message) ->
-              case msg(StructuredData, Message, Opts) of
-                  <<>> -> ok;
-                  MSG  -> forward(Msg, iolist_to_binary([PRI, HDR, MSG]), Opts)
-              end
-      end, binary:split(iolist_to_binary(Msg), [<<"\n">>, <<"\r">>], [global])).
+    case  msg(StructuredData, iolist_to_binary(Msg), Opts) of
+      <<>> -> ok;
+      MSG  -> forward(Msg, iolist_to_binary([PRI, HDR, MSG]), Opts)
+    end.
 
 %%------------------------------------------------------------------------------
 %% @private
